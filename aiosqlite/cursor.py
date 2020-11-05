@@ -2,9 +2,17 @@
 # Licensed under the MIT license
 
 import sqlite3
-from typing import TYPE_CHECKING, Any, AsyncIterator, Iterable, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Iterable,
+    List,
+    Optional,
+    Tuple
+)
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from .core import Connection
 
 
@@ -53,14 +61,14 @@ class Cursor:
         """Fetch a single row."""
         return await self._execute(self._cursor.fetchone)
 
-    async def fetchmany(self, size: int = None) -> Iterable[sqlite3.Row]:
+    async def fetchmany(self, size: int = None) -> List[sqlite3.Row]:
         """Fetch up to `cursor.arraysize` number of rows."""
         args: Tuple[int, ...] = ()
         if size is not None:
             args = (size,)
         return await self._execute(self._cursor.fetchmany, *args)
 
-    async def fetchall(self) -> Iterable[sqlite3.Row]:
+    async def fetchall(self) -> List[sqlite3.Row]:
         """Fetch all remaining rows."""
         return await self._execute(self._cursor.fetchall)
 
