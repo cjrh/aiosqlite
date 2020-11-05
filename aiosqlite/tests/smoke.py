@@ -115,6 +115,52 @@ class SmokeTest(aiounittest.AsyncTestCase):
 
         assert len(rows) == 10
 
+    async def test_passthrough_attributes(self):
+        async with aiosqlite.connect(TEST_DB) as db:
+            cursor = await db.cursor()
+            async with cursor:
+                await cursor.execute("create table foo (i integer)")
+                assert cursor.rowcount == -1
+                assert cursor.lastrowid == 0
+
+            cursors = [await db.cursor() for i in range(5)]
+            for cursor in cursors:
+                assert cursor.connection is db._conn
+                await cursor.executemany("insert into foo (i) values (?)", [[i] for i in range(10)])
+                assert cursor.rowcount == 10
+                assert cursor.lastrowid is None
+
+                await cursor.execute("select * from foo")
+                assert cursor.description[0][0] == 'i'
+                rows = await cursor.fetchmany(5)
+                assert len(rows) == 5
+                assert cursor.lastrowid > 0
+
+            cursor = await db.execute("select * from foo")
+            assert cursor.rowcount == -1
+            assert cursor.lastrowid == 50
+
+            row = await cursor.fetchone()
+            assert row == (0,), row
+
+            # Default arraysize is 1
+            assert cursor.arraysize == 1
+            rows = await cursor.fetchmany()
+            assert cursor.rowcount == -1
+            assert len(rows) == 1
+
+            # Now five at a time
+            cursor.arraysize = 5
+            rows = await cursor.fetchmany()
+            assert len(rows) == 5
+            assert cursor.lastrowid == 50
+
+            # Now all
+            rows = await cursor.fetchall()
+            assert cursor.rowcount == -1
+            assert cursor.lastrowid == 50
+            assert len(rows) == 43, len(rows)
+
     async def test_iterable_cursor(self):
         async with aiosqlite.connect(TEST_DB) as db:
             cursor = await db.cursor()
